@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <filesystem>
 #include "CUtils.h"
 #include "Aircraft.h"
 
@@ -15,6 +16,12 @@ RETVAL InitPlaneList();
 RETVAL InitPlaneFromLine(string aLine);
 
 int main() {
+	fstream dummy;
+	dummy.open("RANDOM.TXT");
+	dummy << "HEHE" << endl;
+	dummy.flush();
+	dummy.close();
+	//need to figure out pathing
 	if (LoadFile("resources/test_1.atc") != RETVAL::OK)
 	{
 		cout << "UNABLE TO OPEN ATC FILE" << endl;

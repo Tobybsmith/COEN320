@@ -8,6 +8,8 @@
 #include "Aircraft.h"
 #include <string>
 
+int Aircraft::mIndexCounter = 0;
+
 using namespace std;
 
 Aircraft::Aircraft() {
@@ -26,9 +28,10 @@ Aircraft::Aircraft(int aTime, int aId, Vec3f aPos, Vec3f aSpeed)
 
 std::string Aircraft::ToString()
 {
-	return string(mEntryTime) + " | " + string(mId) + " | " + string(mEntryPos.x) + ", " +
-			string(mEntryPos.y)+ ", " + string(mEntryPos.z) + " | " + string(mSpeed.x) + ", "
-			+ string(mSpeed.y) + ", " + string(mSpeed.z) + ", INDEX: " + string(mIndex);
+	//return string(mEntryTime) + " | " + string(mId) + " | " + string(mEntryPos.x) + ", " +
+	//		string(mEntryPos.y)+ ", " + string(mEntryPos.z) + " | " + string(mSpeed.x) + ", "
+	//		+ string(mSpeed.y) + ", " + string(mSpeed.z) + ", INDEX: " + string(mIndex);
+	return "Airplane";
 }
 
 Aircraft::~Aircraft() {
