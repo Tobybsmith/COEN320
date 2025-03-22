@@ -2,19 +2,24 @@
 #include <unistd.h>
 #include <vector>
 #include <math.h>
+#include <sstream>
 #include "CUtils.h"
 
 using namespace std;
 
 struct Aircraft {
-	int mId;
-	int mEntranceTime;
-	int mSpeedX; //ft/s
-	int mSpeedY;
-	int mSpeedZ;
-	int mPosX; //from the bottom right corner
-	int mPosY;
-	int mPosZ;
+	int mId = -1;
+	int mEntranceTime = -1;
+	int mSpeedX = -1; //ft/s
+	int mSpeedY = -1;
+	int mSpeedZ = -1;
+	int mPosX = -1 ; //from the bottom right corner
+	int mPosY = -1;
+	int mPosZ = -1;
+	Aircraft()
+	{
+
+	}
 	Aircraft(int i, int t, int sx, int sy, int sz, int px, int py, int pz)
 	{
 		mId = i;
@@ -25,6 +30,18 @@ struct Aircraft {
 		mPosX = px;
 		mPosY = py;
 		mPosZ = pz;
+	}
+	int CalcExitTime()
+	{
+		return 25;
+	}
+	int CalcAOA()
+	{
+		return (int)(atan((float)(mSpeedZ)/(sqrt((float)(mSpeedX * mSpeedX) + (float)(mSpeedY * mSpeedY)))));
+	}
+	int CalcSOG()
+	{
+		return sqrt((float)(mSpeedX * mSpeedX) + (float)(mSpeedY * mSpeedY));
 	}
 };
 
@@ -48,20 +65,38 @@ int WriteToScreen(DISP aDisplayMode);
 int PrintScreen();
 int LoadAircraftFromMemory();
 //Current global time from Computer Module;
-int RefreshDisplay(int aT);
+int DisplayMain(int aT);
+int DisplayDetail(int aId, int aT);
+int DisplaySplash();
+
+//CALL BEFORE SKELETON()
+//THIS FUNCTION IS OVERKILL
+void ClearList();
+void ListCLI();
+void ListDetail(int aId);
+void MapDetail(int aId); //Highlights a specific plane
 
 void Skeleton();
 void Map();
-void List();
+void List(bool aPopulate = true);
+void Prompt();
 
 char RoundAngle(float a, bool &n);
+Aircraft FindACById(int aId);
+int ProcessCommand(string aStr);
+//DOES NOT MODIFY garrScreen[]!!!!!!
+void ClearScreen();
 
+//Clone this and the display + cmd logic to Console instead of DataDisplay
+//
 int main() {
 	LoadAircraftFromMemory();
 	WriteToScreen(DISP::BLANK);
 	//PrintScreen();
 	//sleep(1);
-	RefreshDisplay(2);
+	//DisplayMain(2);
+	//DisplayDetail(2, 5);
+	DisplaySplash();
 	return 0;
 }
 
@@ -69,26 +104,78 @@ int LoadAircraftFromMemory()
 {
 	gvecAircraftList.push_back(Aircraft(0, 5, 50, 0, 3, 20000, 20000, 10));
 	gvecAircraftList.push_back(Aircraft(1, 5, -50, 0, 3, 50000, 50000, 10));
-	gvecAircraftList.push_back(Aircraft(0, 5, 50, -21, 3, 40000, 20000, 10));
-	gvecAircraftList.push_back(Aircraft(1, 5, -50, 13, 3, 35000, 80000, 10));
-	gvecAircraftList.push_back(Aircraft(1, 5, -2, 8, 3, 70000, 18000, 10));
-	gvecAircraftList.push_back(Aircraft(2, 5, 0, -10, 3, 99999, 99999, 10));
+	gvecAircraftList.push_back(Aircraft(2, 5, 50, -21, 3, 40000, 20000, 10));
+	gvecAircraftList.push_back(Aircraft(3, 5, -50, 13, 3, 35000, 80000, 10));
+	gvecAircraftList.push_back(Aircraft(4, 5, -2, 8, 3, 70000, 18000, 10));
+	gvecAircraftList.push_back(Aircraft(5, 5, 0, -10, 3, 99999, 99999, 10));
 	return 0;
 }
 
-int RefreshDisplay(int aT)
+int DisplaySplash()
+{
+	//Display Program name in MAP
+	//Display CLI options in side menu (Refresh Map, View Aircraft Details, Send Command)
+	//Refresh Map is DisplayMain()
+	//View Aircraft Details is DisplayDetail()
+	//Send Command is DisplayCommand()
+	//Starting screen is DisplaySplash()
+	ClearScreen();
+	ClearList();
+	Skeleton();
+	List(false);
+	ListCLI();
+	PrintScreen();
+	Prompt();
+	string command;
+	getline(cin, command);
+	ClearScreen();
+	ProcessCommand(command);
+	return 0;
+}
+
+int DisplayMain(int aT)
 {
 	//Consider only redrawing map and list
 	gTime = aT;
 
 	//Construct The Skeleton of the UI Elements
+	ClearList();
 	Skeleton();
 	Map();
 	List();
 
 	PrintScreen();
+	Prompt();
+	string command;
+	getline(cin, command);
+	ClearScreen();
+	ProcessCommand(command);
 	return 0;
 }
+
+int DisplayDetail(int aId, int aT)
+{
+	gTime = aT;
+
+	ClearList();
+	Skeleton();
+	//the code gets worse every hour
+	List(false);
+	ListDetail(aId);
+	MapDetail(aId);
+
+	PrintScreen();
+	Prompt();
+	string command;
+	getline(cin, command);
+	ClearScreen();
+	ProcessCommand(command);
+	return 0;
+}
+
+//Need to handle command entry and sending
+//DataDisplay does not auto-update, and can be updated with a command from the menu
+//Print menu in list space
 
 int WriteToScreen(DISP aDisplayMode)
 {
@@ -188,7 +275,7 @@ void Map()
 		//cout << ac.mPosX << " " << ac.mPosY << endl;
 		int x = Remap(ac.mPosX, 100000, 0, 29, 0);
 		int y = Remap(ac.mPosY, 100000, 0, 59, 0);
-		garrScreen[y + 2][x + 2] = 'A';
+		garrScreen[y + 2][x + 2] = (char)(ac.mId + 48);
 		//Direction Arrow
 		float angle = atan2(ac.mSpeedY, ac.mSpeedX) * 180 / 3.1415926;
 		bool isNeg = false;
@@ -273,7 +360,7 @@ char RoundAngle(float a, bool & neg)
 	return '?';
 }
 
-void List()
+void List(bool aPopulate)
 {
 
 	garrScreen[LISTTLX][LISTTLY] = 'G';
@@ -291,6 +378,13 @@ void List()
 	garrScreen[LISTTLX + LISTX - 1][LISTTLY] = 'O';
 	garrScreen[LISTTLX][LISTTLY + LISTY - 1] = 'O';
 	garrScreen[LISTTLX + LISTX - 1][LISTTLY + LISTY - 1] = 'O';
+
+	cout << (aPopulate ? "true" : "false") << endl;
+
+	if (!aPopulate)
+	{
+		return;
+	}
 
 	//Now Populate List
 	int count = 0;
@@ -315,4 +409,231 @@ void List()
 		}
 		count += 1;
 	}
+}
+
+Aircraft FindACById(int aId)
+{
+	for (auto ac : gvecAircraftList)
+	{
+		cout << "Aircraft: " << ac.mId << " : " << ac.mPosX << endl;
+		cout << "Searching For: " << aId << endl;
+		if (ac.mId == aId)
+		{
+			return ac;
+		}
+	}
+	return Aircraft();
+}
+
+
+void ListCLI()
+{
+	//First Line:
+	int count = 0;
+	vector<string> message = {"refresh - Refresh Map", "detail <id> - Show Details" , "message - Open Console"};
+		for (int i = 0; i < message.size(); i++)
+		{
+			std::string banner = "CLI OPTIONS                ";
+			int dog = 0;
+			for (int x = LISTTLX + 2; x < message.at(i).size() + LISTTLX + 2; x++)
+			{
+				if (count == 0)
+				{
+					//first pass
+					garrScreen[x][LISTTLY + 2 * count + 1] = banner[x - 2 - LISTTLX];
+				}
+				garrScreen[x][LISTTLY + 2 * count + 3] = message.at(i)[x - 2 - LISTTLX];
+			}
+			count += 1;
+		}
+}
+
+void SendCommandToComputer(int cmd)
+{
+	if (cmd == 0)
+	{
+		cout << "Sending 'refresh' to CPU with target DataDisplay" << endl;
+		DisplayMain(gTime);
+	}
+	else if (cmd == 2)
+	{
+		cout << "Sending 'opencommand' to CPU with target DataDisplay" << endl;
+	}
+	else if (cmd % 4 == 0)
+	{
+		cout << "Sending 'detail' " + to_string(cmd/4) + " to CPU with target DataDisplay" << endl;
+		DisplayDetail(cmd/4, gTime);
+	}
+	else
+	{
+		cout << "EPIC FAIL" << endl;
+	}
+}
+
+void Prompt()
+{
+	cout << "Enter Command \t >";
+}
+
+int ProcessCommand(string aStr)
+{
+	//break up aStr
+	stringstream ss(aStr);
+	vector<string> lvecCmd;
+	string tmp;
+	cout << "COMMAND: " << aStr << endl;
+	while(getline(ss, tmp, ' '))
+	{
+		lvecCmd.push_back(tmp);
+	}
+	//refresh, details, aircraft command
+	if (lvecCmd.at(0) == "refresh")
+	{
+		SendCommandToComputer(0);
+	}
+	else if (lvecCmd.at(0) == "detail")
+	{
+		SendCommandToComputer(4 * stoi(lvecCmd.at(1)));
+	}
+	else if (lvecCmd.at(0) == "command")
+	{
+		SendCommandToComputer(2);
+	}
+	else
+	{
+		return -1;
+	}
+	return 0;
+}
+
+void ClearScreen()
+{
+	for (int i = 0; i < 128; i++)
+	{
+		cout << endl;
+	}
+}
+
+void ListDetail(int aId)
+{
+	Aircraft ac = FindACById(aId);
+	if (ac.mId == -1)
+	{
+		cout << "NO AIRCRAFT WITH ID: " << aId << endl;
+		return;
+	}
+	int count = 0;
+		vector<string> message = {
+				"POS X: " + to_string(ac.mPosX).substr(0,2) + "k ft",
+				"POS Y: " + to_string(ac.mPosY).substr(0,2) + "k ft",
+				"POS Z: " + to_string(ac.mPosZ).substr(0,2) + "k ft",
+				"",
+				"SPD X: " + to_string(ac.mSpeedX) + "mph",
+				"SPD Y: " + to_string(ac.mSpeedY) + "mph",
+				"SPD Z: " + to_string(ac.mSpeedZ) + "mph",
+				"",
+				"ENTRY: " + to_string(ac.mEntranceTime) + "s",
+				"PROJ. EXIT: " + to_string(ac.CalcExitTime()) + "s",
+				"",
+				"AOA: " + to_string(ac.CalcAOA()) + "deg",
+				"SOG: " + to_string(ac.CalcSOG()) + "mph"
+
+		};
+			for (int i = 0; i < message.size(); i++)
+			{
+				std::string banner = "DETAILS OF AIRCRAFT: " + to_string(aId);
+				if (count == 0)
+				{
+					for (int x = LISTTLX + 2; x < banner.size() + LISTTLX + 2; x++)
+					{
+						garrScreen[x][LISTTLY + 2 * count + 1] = banner[x - 2 - LISTTLX];
+					}
+				}
+				for (int x = LISTTLX + 2; x < message.at(i).size() + LISTTLX + 2; x++)
+				{
+					garrScreen[x][LISTTLY + 2 * count + 3] = message.at(i)[x - 2 - LISTTLX];
+				}
+				count += 1;
+			}
+	//Details:
+	//Position, Speed, Entrance Time, Exit Time
+
+}
+
+void ClearList()
+{
+	for (int i = LISTTLY; i < LISTTLY + LISTY; i++)
+	{
+		for (int x = LISTTLX; x < LISTX + LISTTLX; x++)
+		{
+			garrScreen[x][i] = ' ';
+		}
+	}
+}
+
+void MapDetail(int aId)
+{
+	for (int y = MAPTLY; y < MAPTLY + MAPY - 1; y++)
+		{
+			for (int x = MAPTLX; x < MAPTLX + MAPX - 1; x++)
+			{
+				garrScreen[y][x] = ' ';
+			}
+		}
+
+		for (auto ac : gvecAircraftList)
+		{
+			//Recall, the display is 2D
+			//cout << ac.mPosX << " " << ac.mPosY << endl;
+			int x = Remap(ac.mPosX, 100000, 0, 29, 0);
+			int y = Remap(ac.mPosY, 100000, 0, 59, 0);
+			if (ac.mId == aId)
+			{
+				garrScreen[y + 2][x + 2] = 'A';
+			}
+			else
+			{
+				garrScreen[y + 2][x + 2] = '0';
+			}
+
+			//Direction Arrow
+			float angle = atan2(ac.mSpeedY, ac.mSpeedX) * 180 / 3.1415926;
+			bool isNeg = false;
+			//cout << angle << endl;
+			char v = RoundAngle(angle, isNeg);
+			switch (v)
+			{
+			case '>':
+				garrScreen[y+3][x+2] = v;
+				break;
+			case '/':
+				if (isNeg)
+				{
+					garrScreen[y+3][x+1] = v;
+				}
+				else
+				{
+					garrScreen[y+1][x+3] = v;
+				}
+				break;
+			case '^':
+				garrScreen[y+2][x+1] = v;
+				break;
+			case '\\':
+				if (isNeg)
+				{
+					garrScreen[y+1][x+1] = v;
+				}
+				else
+				{
+					garrScreen[y+3][x+3] = v;
+				}
+				break;
+			case '<':
+				garrScreen[y+1][x+2] = v;
+				break;
+			case 'V':
+				garrScreen[y+2][x+3] = v;
+			}
+		}
 }
