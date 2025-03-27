@@ -1,21 +1,36 @@
 #ifndef AIRCRAFT_H
 #define AIRCRAFT_H
 #include "CUtils.h"
+#include <vector>
 #include <string>
-
+using namespace std;
 class Aircraft {
 public:
 	Aircraft();
-	Aircraft(int aTime, int aId, Vec3f aPos, Vec3f aSpeed);
+	Aircraft(int aTime, int aId, float xpos, float ypos, float zpos,
+			float xspeed, float yspeed, float zspeed);
+
 	virtual ~Aircraft();
-	int mEntryTime = -1;
-	int mId = -1;
-	static int mIndexCounter;
-	int mIndex = 0;
-	Vec3f mSpeed;
-	Vec3f mEntryPos;
+	int aId,aTime;
+	float xpos,ypos,zpos,xspeed,yspeed,zspeed;
 
-	std::string ToString();
+	void disp();
+	float getxpos();
+	float getypos();
+	float getzpos();
+
+	float getxspeed();
+	float getyspeed();
+	float getzspeed();
+
+	int getId();
+
+	void setxpos(float xposition);
+	void setypos(float yposition);
+	void setzpos(float zposition);
+
+	void updatePos();
+
+	const Aircraft& getAircraftById(vector<Aircraft*> aircraftList,int aId);
 };
-
 #endif

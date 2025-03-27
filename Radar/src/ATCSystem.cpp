@@ -5,76 +5,118 @@
 #include <filesystem>
 #include "CUtils.h"
 #include "Aircraft.h"
+#include <sstream>
+#include <array>
+#include "../../Shared_mem/src/Shared_mem.h"
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+
+#include "PSR_SSR.h"
 
 using namespace std;
 
-vector<string> mvecFileContent;
-vector<Aircraft> mvecAircraft;
 
-RETVAL LoadFile(string aFileName);
-RETVAL InitPlaneList();
-RETVAL InitPlaneFromLine(string aLine);
+
+
+vector<Aircraft*> initplanes(string FileName);
 
 int main() {
-	fstream dummy;
-	dummy.open("RANDOM.TXT");
-	dummy << "HEHE" << endl;
-	dummy.flush();
-	dummy.close();
-	//need to figure out pathing
-	if (LoadFile("resources/test_1.atc") != RETVAL::OK)
-	{
-		cout << "UNABLE TO OPEN ATC FILE" << endl;
-		return 1;
-	}
-	if (InitPlaneList() != RETVAL::OK)
-	{
-		cout << "UNABLE TO INITALIZE PLANE LIST" << endl;
-		return 1;
-	}
-}
 
-//DO NOT VALIDATE INPUT HERE, NOT EVEN CUTTING COMMENTS
-RETVAL LoadFile(string aFileName)
-{
-	ifstream file;
-	file.open(aFileName);
-	if (!file.is_open())
-	{
-		return RETVAL::IO;
-	}
-	string temp;
-	while (getline(file, temp))
-	{
-		mvecFileContent.push_back(temp);
-	}
-	return RETVAL::OK;
-}
+	// Shared memory not finished
+//	int shm_fd = shm_open("/Shared_mem", O_RDWR, 0666);
+//	if (shm_fd == -1) {
+//	    perror("shm_open");
+//	    exit(1);
+//	}
+//
+//	SharedMemory* sharedMem = (SharedMemory*) mmap(
+//	    NULL,
+//	    sizeof(SharedMemory),
+//	    PROT_READ | PROT_WRITE,
+//	    MAP_SHARED,
+//	    shm_fd,
+//	    0
+//	);
+//
+//	if (sharedMem == MAP_FAILED) {
+//	    perror("mmap");
+//	    exit(1);
+//	}
 
-//SANITIZE FILE CONTENTS HERE
-RETVAL InitPlaneList() {
-	int lines = mvecFileContent.size();
-	try
-	{
-		mvecAircraft.resize(lines);
+	//opens input file, reads the file, and initialize aircrafts
+	string FileName="test_1.txt";
+	vector<Aircraft*> aircraftList = initplanes(FileName);
+	for (int i=0; i<aircraftList.size();i++){
+		aircraftList[i]->disp(); //display aircrafts info
+
 	}
-	catch (...)
-	{
-		return RETVAL::MEM;
+
+
+	PSR_SSR psr_ssr(aircraftList);
+
+	//PSR signal store the position of aircrafts that are in range of the radar
+	vector <PSRData>psrData=psr_ssr.PSRsignal();
+	for (int i=0;i<psrData.size();i++){
+		cout<<"From PSR ==> ID: "<<psrData[i].id <<" | x = "<<psrData[i].x<<" |  y= "<<psrData[i].y<<" | z = "<<psrData[i].z<<endl;
 	}
-	for (auto line : mvecFileContent)
-	{
-		if (line[0] == '#')
-		{
-			continue;
+
+	//From the PSR vector, SSR radar communicate with each aircrafts in range to get their positions
+	vector <SSRData> ssrData=psr_ssr.SSRSignal(psrData);
+	for (int i=0;i<ssrData.size();i++){
+			cout<<"From SSR ==> ID: "<<ssrData[i].id <<" | x = "<<ssrData[i].x<<" |  y= "<<ssrData[i].y<<" | Fl = "<<ssrData[i].fl<<" | xspeed = "<< ssrData[i].xspeed<<" | yspeed = "<< ssrData[i].yspeed<<" | zspeed = "<< ssrData[i].zspeed<< endl;
 		}
-		InitPlaneFromLine(line);
-	}
-	return RETVAL::OK;
+
+
+	return 0;
 }
 
-RETVAL InitPlaneFromLine(string aLine)
-{
-	//TODO
-	return RETVAL::MISC;
+//open input file + initialize aircrafts
+vector<Aircraft*> initplanes(string FileName){
+	ifstream InputFile;
+	InputFile.open("/tmp/resources/"+FileName);
+
+	if(!InputFile.is_open()){
+			cout<<"Failed to open file "+FileName<<endl;
+			return {};
+	}
+
+	else{
+	vector<Aircraft*> aircraftList;
+	string line;
+	while(getline(InputFile,line)){
+		if(line.empty() || line[0]=='#')
+			continue;
+		if(!line.empty() && line.back()=='\r'){
+			line.erase(line.size());
+		}
+
+		stringstream ss(line);
+		int time, id;
+		float xpos, ypos, zpos, xspeed, yspeed, zspeed;
+
+		if(ss>>time>>id>>xpos>>ypos>>zpos>>xspeed>>yspeed>>zspeed){
+			Aircraft* aircraft = new Aircraft(time,id,xpos,ypos,zpos,xspeed,yspeed,zspeed);
+			aircraftList.push_back(aircraft);
+		}
+		else
+			cout<<"Invalid line format: "<<line<<endl;
+	}
+//	cout<<"Success"<<endl;
+	return aircraftList;
+	}
+
 }
+
+//vector<array<float,4>> SSR(vector<Aircraft*>aircraftList){
+//	for(int i=0; i<aircraftList.size();i++){
+//		if(aircraftList[i]->getxpos()	)
+//	}
+//
+//
+//}
+
+
+
+
+
