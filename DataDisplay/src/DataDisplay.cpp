@@ -125,6 +125,12 @@ int DisplaySplash()
 	List(false);
 	ListCLI();
 	PrintScreen();
+
+	Prompt();
+	string command;
+	getline(cin, command);
+	ClearScreen();
+	ProcessCommand(command);
 	return 0;
 }
 
