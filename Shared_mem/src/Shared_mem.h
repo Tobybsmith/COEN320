@@ -2,23 +2,23 @@
 
 #include <pthread.h>
 
-// shared clock structure
+// Shared clock structure
 struct SharedClock {
     int currentTimeInSeconds;
     pthread_mutex_t clockMutex;
 };
 
-
-// shared PSRData
+// Placeholder for other shared data structures
+// Example: Add PSRData, SSRData, Alerts, Commands, etc.
 struct PSRData {
-	float x, y, z;
-	int id;
-    // Add more if needed
+    int id;
+    float x, y, z;
 };
-// shared SSRData
+
 struct SSRData {
-	int id;
-	float fl, xspeed, yspeed, zspeed, x, y;
+    int id;
+    float x, y, fl;
+    float xspeed, yspeed, zspeed;
 };
 
 #define MAX_AIRCRAFT 100

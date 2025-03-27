@@ -2,10 +2,10 @@
 #define UTILS_H
 
 enum RETVAL {
-	OK = 0,
-	IO = 1,
-	MEM = 2,
-	MISC = 3,
+	OK = 0, //success
+	IO = 1, //file error
+	MEM = 2, //memory error
+	MISC = 3, //other errors
 	END_ENUM = 4
 };
 

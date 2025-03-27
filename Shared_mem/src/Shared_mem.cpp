@@ -9,20 +9,20 @@
 #define SHM_NAME "/Shared_mem"
 
 int main() {
-    // create or open the shared memory object
+    // Step 1: Create or open the shared memory object
     int shm_fd = shm_open(SHM_NAME, O_CREAT | O_RDWR, 0666);
     if (shm_fd == -1) {
         perror("shm_open");
         exit(1);
     }
 
-    // set the size of the shared memory object
+    // Step 2: Set the size of the shared memory object
     if (ftruncate(shm_fd, sizeof(SharedMemory)) == -1) {
         perror("ftruncate");
         exit(1);
     }
 
-    // map the shared memory object into the process’s address space
+    // Step 3: Map the shared memory object into the process’s address space
     SharedMemory* sharedMem = (SharedMemory*) mmap(
         NULL,
         sizeof(SharedMemory),
@@ -37,27 +37,25 @@ int main() {
         exit(1);
     }
 
-    // initialize mutex attributes for inter-process sharing
+    // Step 4: Initialize mutex attributes for inter-process sharing
     pthread_mutexattr_t mutexAttr;
     pthread_mutexattr_init(&mutexAttr);
     pthread_mutexattr_setpshared(&mutexAttr, PTHREAD_PROCESS_SHARED);
 
-    // initialize all mutexes
+    // Step 5: Initialize all mutexes
     pthread_mutex_init(&sharedMem->simClock.clockMutex, &mutexAttr);
     pthread_mutex_init(&sharedMem->radarDataMutex, &mutexAttr);
-    //add the other mutexes here
 
-    // initialize values
+    // Step 6: Initialize values
     sharedMem->simClock.currentTimeInSeconds = 0;
     sharedMem->psrDataCount = 0;
     sharedMem->ssrDataCount = 0;
 
     std::cout << "Shared memory segment created and initialized.\n";
 
-    // Optional: Keep the process alive to keep shared memory mapped
-    // For now, just pause (e.g., wait for enter)
-    std::cout << "Press ENTER to exit and unmap shared memory.\n";
-    std::cin.get();
+    while (true) {
+           sleep(1);  // Sleep to reduce CPU usage
+       }
 
     // Step 7: Cleanup (optional in setup phase, useful for testing)
     munmap(sharedMem, sizeof(SharedMemory));
