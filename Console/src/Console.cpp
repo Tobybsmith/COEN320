@@ -2,6 +2,8 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <thread>
+#include <unistd.h>
 using namespace std;
 
 //This message is sent to an aircraft to inform it to change it's speed
@@ -31,22 +33,27 @@ void MessagePrompt();
 void ProcessCommand(string);
 void ProcessMessage(string);
 void Prompt();
+void Run();
 
 int main() {
-	//Call Display.DisplaySplash()
-	//Then, do Prompt() + cmd
-	//Then, ONLY MAKE DISPLAY CALLS to DataDisplay
-	SendCommandToCPU("splash");
-	Prompt();
-	string command;
-	getline(cin, command);
-	ProcessCommand(command);
-	//await CommandProcessed == true
-	//DataDisplay -> Prompt -> Update DataDisplay
-	//ProcessCommand will send the command to CPU
-	while (true)
+	thread console(Run);
+	console.detach();
+	//do other stuff here (like sleeping forever)
+	for (;;) sleep(1);
+}
+
+//Commands:
+//refresh - Sets DataDisplay to standard mode
+//detail <id> - Sets DataDisplay to detailed view mode
+//command - Sends a command to an aircraft to change speed
+void Run()
+{
+	for (;;)
 	{
-		//If the user is writing an aircraft message
+		Prompt();
+		string command;
+		getline(cin, command);
+		ProcessCommand(command);
 		if (mode == 1)
 		{
 			MessagePrompt();
@@ -65,31 +72,18 @@ int main() {
 			ProcessCommand(command);
 		}
 	}
-	return 0;
 }
 
-//Commands the DataDisplay can process:
-//refresh
-//refresh <alt>
-//detail <id>
-//message
-//splash - only used on startup and not user-accessible
 int SendCommandToCPU(string command, long param)
 {
 	if (command == "refresh")
 	{
-		//called w/o alt
-		if (param == -1)
-		{
-			cout << "Sending refresh to CPU with target DataDisplay" << endl;
-		}
-		else
-		{
-			cout << "Sending refresh(" << to_string(param) << ")  to CPU with target DataDisplay" << endl;
-		}
+		//Set mode on datadisplay to 0
+		cout << "Sending refresh" << endl;
 	}
 	else if (command == "detail")
 	{
+		//set mode on datadisplay to 1, param
 		cout << "Sending detail(" << param << ") to CPU with target DataDisplay" << endl;
 	}
 	else if (command == "message")

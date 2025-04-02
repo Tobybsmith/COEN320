@@ -3,6 +3,7 @@
 #include <vector>
 #include <math.h>
 #include <sstream>
+#include <thread>
 #include "CUtils.h"
 
 using namespace std;
@@ -59,7 +60,12 @@ const int LISTX = 32;
 const int LISTY = 36;
 char garrScreen[X][Y];
 
-int gTime = -1;
+int gTime = 0;
+bool gBreak = false;
+int gId = -1;
+int gMode = 0;
+
+void StopDisplay() { gBreak = true; };
 
 int WriteToScreen(DISP aDisplayMode);
 int PrintScreen();
@@ -86,18 +92,69 @@ Aircraft FindACById(int aId);
 int ProcessCommand(string aStr);
 //DOES NOT MODIFY garrScreen[]!!!!!!
 void ClearScreen();
+void UpdateTime();
+void Run();
+void ChangeDisplayMode(int aMode, int aId=-1);
 
 //Clone this and the display + cmd logic to Console instead of DataDisplay
 //
 int main() {
-	LoadAircraftFromMemory();
-	WriteToScreen(DISP::BLANK);
+	//LoadAircraftFromMemory();
+	//WriteToScreen(DISP::BLANK);
 	//PrintScreen();
 	//sleep(1);
 	//DisplayMain(2);
 	//DisplayDetail(2, 5);
-	DisplaySplash();
-	return 0;
+	//DisplaySplash();
+	ChangeDisplayMode(1, 3);
+	thread display(Run);
+	display.detach();
+	for (;;)
+		sleep(1);
+}
+
+//0=standard
+//1=detail
+void ChangeDisplayMode(int aMode, int aId)
+{
+	if (aMode == 0)
+	{
+		gId = -1;
+		gMode = 0;
+	}
+	else if (aMode == 1)
+	{
+		gId = aId;
+		gMode = 1;
+	}
+}
+
+void Run()
+{
+	//Update datadisplay every second, no need for prompting or anything
+	//Check aircraft data, plot aircraft
+	for(;;)
+	{
+		ClearScreen();
+		WriteToScreen(DISP::BLANK);
+		UpdateTime();
+		gvecAircraftList.clear();
+		//TODO: Integrate this!
+		LoadAircraftFromMemory();
+		if (gMode == 0)
+			DisplayMain(gTime);
+		else
+			DisplayDetail(gId, gTime);
+		sleep(1);
+		if (gBreak)
+			break;
+	}
+}
+
+void UpdateTime()
+{
+	//gTime = shared_mem.access(time)
+	gTime += 1;
 }
 
 int LoadAircraftFromMemory()
@@ -146,11 +203,11 @@ int DisplayMain(int aT)
 	List();
 
 	PrintScreen();
-	Prompt();
-	string command;
-	getline(cin, command);
-	ClearScreen();
-	ProcessCommand(command);
+	//Prompt();
+	//string command;
+	//getline(cin, command);
+	//ClearScreen();
+	//ProcessCommand(command);
 	return 0;
 }
 
@@ -166,11 +223,11 @@ int DisplayDetail(int aId, int aT)
 	MapDetail(aId);
 
 	PrintScreen();
-	Prompt();
-	string command;
-	getline(cin, command);
-	ClearScreen();
-	ProcessCommand(command);
+	//Prompt();
+	//string command;
+	//getline(cin, command);
+	//ClearScreen();
+	//ProcessCommand(command);
 	return 0;
 }
 
@@ -218,6 +275,7 @@ int PrintScreen()
 
 void Skeleton()
 {
+	//OUTER FRAME
 	for (int i = 0; i < X; i++)
 	{
 		garrScreen[i][0] = '=';
@@ -237,7 +295,7 @@ void Skeleton()
 	garrScreen[0][Y-1] = 'O';
 	garrScreen[X-1][Y-1] = 'O';
 
-	//Construct RADAR Map
+	//MAP FRAME
 	for (int i = 2; i < 2 + MAPY; i++)
 	{
 		garrScreen[i][2] = '=';
@@ -252,6 +310,15 @@ void Skeleton()
 	garrScreen[2 + MAPY][2] = 'O';
 	garrScreen[2][2 + MAPX] = 'O';
 	garrScreen[MAPY + 2][2 + MAPX] = 'O';
+	garrScreen[2][MAPX + 4] = 'T';
+	garrScreen[3][MAPX + 4] = 'i';
+	garrScreen[4][MAPX + 4] = 'm';
+	garrScreen[5][MAPX + 4] = 'e';
+	garrScreen[6][MAPX + 4] = ':';
+	garrScreen[7][MAPX + 4] = ' ';
+	garrScreen[8][MAPX + 4] = (char)((gTime/10) + 48);
+	garrScreen[9][MAPX + 4] = (char)((gTime%10) + 48);
+	garrScreen[10][MAPX + 4] = 's';
 }
 
 void Map()
@@ -380,7 +447,7 @@ void List(bool aPopulate)
 	garrScreen[LISTTLX][LISTTLY + LISTY - 1] = 'O';
 	garrScreen[LISTTLX + LISTX - 1][LISTTLY + LISTY - 1] = 'O';
 
-	cout << (aPopulate ? "true" : "false") << endl;
+	//cout << (aPopulate ? "true" : "false") << endl;
 
 	if (!aPopulate)
 	{
@@ -398,7 +465,6 @@ void List(bool aPopulate)
 		l.timetoexit = 10;
 		//cout << l.Stringify() << endl;
 		std::string banner = "ID | POS (10k ft) | T_EXIT         ";
-		int dog = 0;
 		for (int x = LISTTLX + 2; x < l.Stringify().size() + LISTTLX + 2; x++)
 		{
 			if (count == 0)
@@ -416,8 +482,8 @@ Aircraft FindACById(int aId)
 {
 	for (auto ac : gvecAircraftList)
 	{
-		cout << "Aircraft: " << ac.mId << " : " << ac.mPosX << endl;
-		cout << "Searching For: " << aId << endl;
+		//cout << "Aircraft: " << ac.mId << " : " << ac.mPosX << endl;
+		//cout << "Searching For: " << aId << endl;
 		if (ac.mId == aId)
 		{
 			return ac;
@@ -435,7 +501,6 @@ void ListCLI()
 		for (int i = 0; i < message.size(); i++)
 		{
 			std::string banner = "CLI OPTIONS                ";
-			int dog = 0;
 			for (int x = LISTTLX + 2; x < message.at(i).size() + LISTTLX + 2; x++)
 			{
 				if (count == 0)
@@ -453,21 +518,21 @@ void SendCommandToComputer(int cmd)
 {
 	if (cmd == 0)
 	{
-		cout << "Sending 'refresh' to CPU with target DataDisplay" << endl;
+		//cout << "Sending 'refresh' to CPU with target DataDisplay" << endl;
 		DisplayMain(gTime);
 	}
 	else if (cmd == 2)
 	{
-		cout << "Sending 'opencommand' to CPU with target DataDisplay" << endl;
+		//cout << "Sending 'opencommand' to CPU with target DataDisplay" << endl;
 	}
 	else if (cmd % 4 == 0)
 	{
-		cout << "Sending 'detail' " + to_string(cmd/4) + " to CPU with target DataDisplay" << endl;
+		//cout << "Sending 'detail' " + to_string(cmd/4) + " to CPU with target DataDisplay" << endl;
 		DisplayDetail(cmd/4, gTime);
 	}
 	else
 	{
-		cout << "EPIC FAIL" << endl;
+		//cout << "EPIC FAIL" << endl;
 	}
 }
 
@@ -482,7 +547,7 @@ int ProcessCommand(string aStr)
 	stringstream ss(aStr);
 	vector<string> lvecCmd;
 	string tmp;
-	cout << "COMMAND: " << aStr << endl;
+	//cout << "COMMAND: " << aStr << endl;
 	while(getline(ss, tmp, ' '))
 	{
 		lvecCmd.push_back(tmp);
@@ -509,7 +574,7 @@ int ProcessCommand(string aStr)
 
 void ClearScreen()
 {
-	for (int i = 0; i < 128; i++)
+	for (int i = 0; i < 64; i++)
 	{
 		cout << endl;
 	}
