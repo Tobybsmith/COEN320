@@ -24,6 +24,7 @@ public:
 	float getzspeed();
 
 	int getId();
+	int getTime();
 
 	void setxpos(float xposition);
 	void setypos(float yposition);

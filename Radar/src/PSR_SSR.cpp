@@ -29,7 +29,7 @@ vector<PSRData> PSR_SSR::PSRsignal(){
 		float ypos=aircrafts[i]->getypos();
 		float zpos=aircrafts[i]->getzpos();
 		int id=aircrafts[i]->getId();
-		if(xpos>= 0 && xpos<=10000 && ypos>= 0 && ypos<=10000 && zpos>= 15000 && zpos<=40000){
+		if(xpos>= 0 && xpos<=100000 && ypos>= 0 && ypos<=10000 && zpos>= 15000 && zpos<=40000){
 			psrdata.id=id;
 			psrdata.x=xpos;
 			psrdata.y=ypos;

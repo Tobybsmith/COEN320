@@ -48,6 +48,9 @@ float Aircraft:: getyspeed(){
 float Aircraft:: getzspeed(){
 	return zspeed;
 	}
+int Aircraft:: getTime(){
+	return aTime;
+}
 void Aircraft:: setxpos(float xposition){
 	xpos=xposition;
 }
@@ -58,11 +61,11 @@ void Aircraft:: setzpos(float zposition){
 	zpos=zposition;
 	}
 
-//updates aircraft's position. Assuming task period of 3 sec.
+//updates aircraft's position.
 void Aircraft:: updatePos(){
-	float NewXpos=xpos+3*xspeed; //assuming speed is per seconds
-	float NewYpos=ypos+3*yspeed;
-	float NewZpos=zpos+3*zspeed;
+	float NewXpos=xpos+xspeed; //assuming speed is per seconds
+	float NewYpos=ypos+yspeed;
+	float NewZpos=zpos+zspeed;
 	this->setxpos(NewXpos);
 	this->setypos(NewYpos);
 	this->setzpos(NewZpos);
