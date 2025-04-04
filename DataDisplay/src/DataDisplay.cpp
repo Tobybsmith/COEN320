@@ -5,6 +5,14 @@
 #include <sstream>
 #include <thread>
 #include "CUtils.h"
+#include "../../Shared_mem/src/Shared_mem.h"
+
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/neutrino.h>
+#include <sys/procmgr.h>
+#include <cstring>
+#include <cstdlib>
 
 using namespace std;
 
@@ -64,6 +72,7 @@ int gTime = 0;
 bool gBreak = false;
 int gId = -1;
 int gMode = 0;
+SharedMemory* sharedMem;
 
 void StopDisplay() { gBreak = true; };
 
@@ -95,6 +104,7 @@ void ClearScreen();
 void UpdateTime();
 void Run();
 void ChangeDisplayMode(int aMode, int aId=-1);
+void CheckMode();
 
 //Clone this and the display + cmd logic to Console instead of DataDisplay
 //
@@ -106,7 +116,12 @@ int main() {
 	//DisplayMain(2);
 	//DisplayDetail(2, 5);
 	//DisplaySplash();
-	ChangeDisplayMode(1, 3);
+	int shm_fd = shm_open("/Shared_mem", O_RDWR, 0666);
+	    if (shm_fd == -1) { perror("shm_open"); exit(1); }
+	    sharedMem = (SharedMemory*) mmap(NULL, sizeof(SharedMemory), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+	    if (sharedMem == MAP_FAILED) { perror("mmap"); exit(1); }
+
+	ChangeDisplayMode(0);
 	thread display(Run);
 	display.detach();
 	for (;;)
@@ -129,6 +144,14 @@ void ChangeDisplayMode(int aMode, int aId)
 	}
 }
 
+void CheckMode()
+{
+    pthread_mutex_lock(&sharedMem->displayConsoleMutex);
+    gMode = (sharedMem->displayDetailId == -1) ? 0 : 1;
+    gId = (sharedMem->displayDetailId == -1) ? -1 : sharedMem->displayDetailId;
+    pthread_mutex_unlock(&sharedMem->displayConsoleMutex);
+}
+
 void Run()
 {
 	//Update datadisplay every second, no need for prompting or anything
@@ -139,8 +162,8 @@ void Run()
 		WriteToScreen(DISP::BLANK);
 		UpdateTime();
 		gvecAircraftList.clear();
-		//TODO: Integrate this!
 		LoadAircraftFromMemory();
+		CheckMode();
 		if (gMode == 0)
 			DisplayMain(gTime);
 		else
@@ -154,17 +177,26 @@ void Run()
 void UpdateTime()
 {
 	//gTime = shared_mem.access(time)
-	gTime += 1;
+    pthread_mutex_lock(&sharedMem->simClock.clockMutex);
+    gTime = sharedMem->simClock.currentTimeInSeconds;
+    pthread_mutex_unlock(&sharedMem->simClock.clockMutex);
 }
 
 int LoadAircraftFromMemory()
 {
-	gvecAircraftList.push_back(Aircraft(0, 5, 50, 0, 3, 20000, 20000, 10));
-	gvecAircraftList.push_back(Aircraft(1, 5, -50, 0, 3, 50000, 50000, 10));
-	gvecAircraftList.push_back(Aircraft(2, 5, 50, -21, 3, 40000, 20000, 10));
-	gvecAircraftList.push_back(Aircraft(3, 5, -50, 13, 3, 35000, 80000, 10));
-	gvecAircraftList.push_back(Aircraft(4, 5, -2, 8, 3, 70000, 18000, 10));
-	gvecAircraftList.push_back(Aircraft(5, 5, 0, -10, 3, 99999, 99999, 10));
+	pthread_mutex_lock(&sharedMem->radarDataMutex);
+	SSRData input;
+	Aircraft output;
+	for (int i = 0; i < sharedMem->ssrDataCount; i++)
+	{
+		//id x y z xs ys zs
+		input = sharedMem->ssrData[i];
+		//id t sx sy sz x y z
+		//Aircraft enters when it can be seen on the radar
+		output = Aircraft(input.id, gTime, (int)input.xspeed, (int)input.yspeed, (int)input.zspeed, (int)input.x, (int)input.y, (int)input.fl);
+		gvecAircraftList.push_back(output);
+	}
+	pthread_mutex_unlock(&sharedMem->radarDataMutex);
 	return 0;
 }
 

@@ -4,6 +4,13 @@
 #include <vector>
 #include <thread>
 #include <unistd.h>
+#include "../../Shared_mem/src/Shared_mem.h"
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/neutrino.h>
+#include <sys/procmgr.h>
+#include <cstring>
+#include <cstdlib>
 using namespace std;
 
 //This message is sent to an aircraft to inform it to change it's speed
@@ -24,7 +31,7 @@ struct AircraftMessage {
 };
 
 int mode = 0; //0 = CLI, 1=aircraft CMD
-
+SharedMemory* sharedMem;
 AircraftMessage * messageToSend = new AircraftMessage();
 
 int SendCommandToCPU(string, long param = -1);
@@ -36,6 +43,10 @@ void Prompt();
 void Run();
 
 int main() {
+	int shm_fd = shm_open("/Shared_mem", O_RDWR, 0666);
+	    if (shm_fd == -1) { perror("shm_open"); exit(1); }
+	    sharedMem = (SharedMemory*) mmap(NULL, sizeof(SharedMemory), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+	    if (sharedMem == MAP_FAILED) { perror("mmap"); exit(1); }
 	thread console(Run);
 	console.detach();
 	//do other stuff here (like sleeping forever)
@@ -78,22 +89,29 @@ int SendCommandToCPU(string command, long param)
 {
 	if (command == "refresh")
 	{
-		//Set mode on datadisplay to 0
-		cout << "Sending refresh" << endl;
+		cout << "Retuning Display To Big-Picture" << endl;
+	    pthread_mutex_lock(&sharedMem->displayConsoleMutex);
+	    sharedMem->displayDetailId = -1;
+	    pthread_mutex_unlock(&sharedMem->displayConsoleMutex);
 	}
 	else if (command == "detail")
 	{
 		//set mode on datadisplay to 1, param
-		cout << "Sending detail(" << param << ") to CPU with target DataDisplay" << endl;
+		cout << "Displaying details of aircraft: " << param << endl;
+		pthread_mutex_lock(&sharedMem->displayConsoleMutex);
+		sharedMem->displayDetailId = param;
+		pthread_mutex_unlock(&sharedMem->displayConsoleMutex);
 	}
 	else if (command == "message")
 	{
-		//maybe send pointer to aircraft_message object?
-		cout << "Sending message(" << messageToSend << ") to CPU with target Comms" << endl;
-	}
-	else if (command == "splash")
-	{
-		cout << "Sending splash to CPU with target DataDisplay" << endl;
+		AircraftCommand ac;
+		ac.id = messageToSend->mTargetId;
+		ac.xspeed = (float)messageToSend->mNewSpdX;
+		ac.yspeed = (float)messageToSend->mNewSpdY;
+		ac.zspeed = (float)messageToSend->mNewSpdZ;
+		pthread_mutex_lock(&sharedMem->displayConsoleMutex);
+		sharedMem->consoleCommand = ac;
+		pthread_mutex_unlock(&sharedMem->displayConsoleMutex);
 	}
 	return 0;
 }
@@ -142,7 +160,7 @@ void ProcessCommand(string aStr)
 int SendCommandToAircraft()
 {
 	//Send address of message
-	SendCommandToCPU("message", (long)messageToSend);
+	SendCommandToCPU("message");
 	//cout << (long)messageToSend << "   " << &messageToSend << endl;
 	return 0;
 }

@@ -17,6 +17,11 @@ struct SSRData {
     float xspeed, yspeed, zspeed;
 };
 
+struct AircraftCommand {
+	int id = -1;
+	float xspeed, yspeed, zspeed;
+};
+
 #define MAX_AIRCRAFT 100
 
 struct SharedMemory {
@@ -26,4 +31,7 @@ struct SharedMemory {
     SSRData ssrData[MAX_AIRCRAFT];
     int ssrDataCount;
     pthread_mutex_t radarDataMutex;
+    pthread_mutex_t displayConsoleMutex;
+    int displayDetailId;
+    AircraftCommand consoleCommand;
 };

@@ -1,6 +1,8 @@
 #include <iostream>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/neutrino.h>
+#include <sys/procmgr.h>
 #include <unistd.h>
 #include <cstring>
 #include <cstdlib>
@@ -32,10 +34,12 @@ int main() {
 
     pthread_mutex_init(&sharedMem->simClock.clockMutex, &mutexAttr);
     pthread_mutex_init(&sharedMem->radarDataMutex, &mutexAttr);
+    pthread_mutex_init(&sharedMem->displayConsoleMutex, &mutexAttr);
 
     sharedMem->simClock.currentTimeInSeconds = 0;
     sharedMem->psrDataCount = 0;
     sharedMem->ssrDataCount = 0;
+    sharedMem->displayDetailId = -1;
 
     std::cout << "Shared memory initialized. Press Ctrl+C to terminate.\n";
 
