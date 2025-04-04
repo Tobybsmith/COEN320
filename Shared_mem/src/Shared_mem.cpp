@@ -41,10 +41,59 @@ int main() {
     sharedMem->ssrDataCount = 0;
     sharedMem->displayDetailId = -1;
 
+
     std::cout << "Shared memory initialized. Press Ctrl+C to terminate.\n";
 
     while (true) {
-        sleep(1);
+        pthread_mutex_lock(&sharedMem->simClock.clockMutex);
+        int time = sharedMem->simClock.currentTimeInSeconds;
+        pthread_mutex_unlock(&sharedMem->simClock.clockMutex);
+
+        pthread_mutex_lock(&sharedMem->radarDataMutex);
+
+        std::cout << "\n=== Shared Memory Snapshot ===\n";
+        std::cout << "Simulation Time: " << time << "s\n";
+
+        std::cout << "\nPSR Data (" << sharedMem->psrDataCount << " aircraft):\n";
+        for (int i = 0; i < sharedMem->psrDataCount; ++i) {
+            PSRData p = sharedMem->psrData[i];
+            std::cout << "  [PSR] ID: " << p.id << " | x=" << p.x << " y=" << p.y << " z=" << p.z << "\n";
+        }
+
+        std::cout << "\nSSR Data (" << sharedMem->ssrDataCount << " aircraft):\n";
+        for (int i = 0; i < sharedMem->ssrDataCount; ++i) {
+            SSRData s = sharedMem->ssrData[i];
+            std::cout << "  [SSR] ID: " << s.id << " | x=" << s.x << " y=" << s.y << " z=" << s.fl
+                      << " | vx=" << s.xspeed << " vy=" << s.yspeed << " vz=" << s.zspeed << "\n";
+        }
+
+        pthread_mutex_unlock(&sharedMem->radarDataMutex);
+
+        pthread_mutex_lock(&sharedMem->displayConsoleMutex);
+
+        AircraftCommand cmd = sharedMem->consoleCommand;
+        if (cmd.id != -1) {
+            std::cout << "\n[Console Command] Target ID: " << cmd.id
+                      << " | New Speed: vx=" << cmd.xspeed
+                      << " vy=" << cmd.yspeed
+                      << " vz=" << cmd.zspeed << "\n";
+        } else {
+            std::cout << "\n[Console Command] No command issued.\n";
+        }
+
+        AircraftCommand cc = sharedMem->computerCommand;
+        if (cc.id != -1) {
+            std::cout << "[Computer Command] Target ID: " << cc.id
+                      << " | New Speed: vx=" << cc.xspeed
+                      << " vy=" << cc.yspeed
+                      << " vz=" << cc.zspeed << "\n";
+        } else {
+            std::cout << "[Computer Command] No command issued.\n";
+        }
+
+        pthread_mutex_unlock(&sharedMem->displayConsoleMutex);
+
+        sleep(3);
     }
 
     munmap(sharedMem, sizeof(SharedMemory));

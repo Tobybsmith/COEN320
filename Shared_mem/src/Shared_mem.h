@@ -22,6 +22,7 @@ struct AircraftCommand {
 	float xspeed, yspeed, zspeed;
 };
 
+
 #define MAX_AIRCRAFT 100
 
 struct SharedMemory {
@@ -34,4 +35,5 @@ struct SharedMemory {
     pthread_mutex_t displayConsoleMutex;
     int displayDetailId;
     AircraftCommand consoleCommand;
+    AircraftCommand computerCommand;
 };
