@@ -124,7 +124,7 @@ void SSRThread(PSR_SSR& psr_ssr) {
 }
 
 vector<Aircraft*> initplanes(const string& fileName) {
-    ifstream file("/tmp/resources/" + fileName);
+    ifstream file("/tmp/" + fileName);
     vector<Aircraft*> list;
     string line;
 
