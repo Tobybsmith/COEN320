@@ -32,8 +32,8 @@ struct SharedMemory {
     SSRData ssrData[MAX_AIRCRAFT];
     int ssrDataCount;
     pthread_mutex_t radarDataMutex;
-    pthread_mutex_t displayConsoleMutex;
     int displayDetailId;
     AircraftCommand consoleCommand;
     AircraftCommand computerCommand;
+    pthread_mutex_t displayConsoleMutex;
 };

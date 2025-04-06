@@ -115,7 +115,7 @@ int main() {
         }
 
         // Sleep before next check
-        sleep(5);
+        sleep(3);
     }
 
     munmap(sharedMem, sizeof(SharedMemory));
