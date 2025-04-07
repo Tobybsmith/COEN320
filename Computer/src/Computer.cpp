@@ -13,30 +13,9 @@
 using namespace std;
 #define SHM_NAME "/Shared_mem"
 
-// Forward-declare or include your shared memory structures
-//struct AircraftCommand {
-//    int id;
-//    float xspeed;
-//    float yspeed;
-//    float zspeed;
-//    // ... other fields if needed
-//};
-
-//struct SSRData {
-//    int id;
-//    float x, y, fl;
-//    float xspeed, yspeed, zspeed;
-//};
 
 #define MAX_AIRCRAFT 100
 
-// Example shared memory structure (adjust to match your actual code)
-//struct SharedMemory {
-//    SSRData ssrData[MAX_AIRCRAFT];
-//    int ssrDataCount;
-//    AircraftCommand consoleCommand;    // A place to store the command
-//    pthread_mutex_t radarDataMutex;    // Mutex to protect SSR data/commands
-//};
 
 volatile bool keepRunning = true;
 void intHandler(int) { keepRunning = false; }
@@ -61,7 +40,7 @@ int main() {
            exit(1);
        }
 
-       // Map the shared memory into process address space
+
        SharedMemory* sharedMem = (SharedMemory*) mmap(nullptr, sizeof(SharedMemory), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
        if (sharedMem == MAP_FAILED) {
            perror("mmap");

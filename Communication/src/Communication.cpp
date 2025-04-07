@@ -18,7 +18,6 @@ int main() {
         exit(1);
     }
 
-    // Map the shared memory into process address space
     SharedMemory* sharedMem = (SharedMemory*) mmap(nullptr, sizeof(SharedMemory), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
     if (sharedMem == MAP_FAILED) {
         perror("mmap");
@@ -41,9 +40,8 @@ int main() {
                  << ", vz=" << consoleCmd.zspeed << endl;
         }
 
-        // Check Computer Command (placeholder)
-        // You must add `AircraftCommand computerCommand;` to SharedMemory structure
-        AircraftCommand computerCmd = sharedMem->computerCommand; // assumed added
+
+        AircraftCommand computerCmd = sharedMem->computerCommand;
         if (computerCmd.id != -1) {
             cout << "[COMM] Command from COMPUTER -> Aircraft ID: " << computerCmd.id
                  << " | New Speed: vx=" << computerCmd.xspeed
